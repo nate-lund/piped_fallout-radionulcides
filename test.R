@@ -1,7 +1,12 @@
 #================================ Setup ================================
 
+#================================ Setup ================================
+
+# Clear environment
+rm(list = ls(all.names = TRUE))
+
 # libraries needed
-libs <- c("")
+libs <- c("httr", "jsonlite", "ggplot2", "terra", "leaflet", "ncdf4", "tidyr", "dplyr", "readr", "targets", "usethis", "sf", "targets", "visNetwork", "tarchetypes", "tidyterra", "performance", "see", "RColorBrewer", "lme4", "nlme", "readxl", "writexl", "emmeans", "splines", "lspline", "ggeffects", "lubridate", "cowplot", "gridGraphics", "broom", "DT", "flextable", "wesanderson", "ggspatial", "extrafont")
 
 # install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
@@ -12,19 +17,17 @@ if (any(installed_libs == F)) {
 # load libraries
 lapply(libs, library, character.only = T)
 
-# enter the file path for the highest level folder you're working in 
-data_folder <- "C:/Users/natha/Box/"
-
-# when a file is needed, call the hert() function
-# for example; data_frame = read.csv(hert("more_data/measurements_data.csv"))
-hert <- function(file) {
-  file_path = paste(data_folder, file, sep = "")
-  return(file_path)
-}
-
 #================================ X ================================
 
+path = "G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/reference-bulk-density.xlsx"
 
+data = read_excel(path)
 
+datatable(processed)
 
-
+processed = data %>% 
+  # Remove root ball sample
+  filter(!(site == "ARB" & replicate == "B" & depth == "0-5")) %>% 
+  group_by(site, depth) %>% 
+  summarise(mean = mean(bd)) %>% 
+  ungroup()
