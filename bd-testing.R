@@ -18,9 +18,13 @@ lapply(libs, library, character.only = T)
 #================================ X ================================
 
 path = "G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/reference-bulk-density.xlsx"
-ref_bd = read_excel(path)
+ref_bd_raw = read_excel(path)
 
-ref_bd = ref_bd %>% 
+ggplot(data = ref_bd_raw, mapping = aes(x = bd, y = -bottom_depth, color = site)) +
+  geom_point()
+
+
+ref_bd = ref_bd_raw %>% 
   # Remove root ball sample
   filter(!(site == "ARB" & replicate == "B" & bottom_depth == 5)) %>% 
   group_by(site, bottom_depth) %>% 
@@ -30,7 +34,7 @@ ref_bd = ref_bd %>%
 
 path2 = "G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample_inventory.xlsx"
 inventory = read_excel(path2)
-datatable(inventory2)
+
 
 inventory2 = inventory %>%
   mutate(
@@ -51,15 +55,39 @@ inventory2 = inventory %>%
     bd = dry_mass / volume
   )
 
+
+#================================ BD Worm difference ================================
+
+# Clean up df
+clean_inven = inventory2 %>% 
+  select(site, forest, slope_pos, bottom_depth, dry_mass, volume, bd) %>% 
+  filter(forest %in% c("ASH", "WD", "MAG", "LRJ", "LRW", "LRE")) %>% 
+  
+  # Order slope positions
+  mutate(
+    slope_pos = factor(slope_pos, levels = c("TS60", "FS60", "TS30", "FS30", "BS1", "BS2", "BS3", "SH", "SU")),
+    
+    worms = case_when(
+      forest %in% c("ASH", "LRE", "LRW") ~ "EW",
+      forest %in% c("MAG", "WD", "LRJ") ~ "JW"
+    )
+  )
+
+
+ggplot(data = clean_inven, mapping = aes(x = slope_pos, y = bd)) +
+  geom_point() +
+  facet_wrap(~worms, ncol = 1)
+
+
+#================================ BD Probe testing ================================
+
 # Look at only reference samples
 probe_ref = inventory2 %>% 
   select(site, forest, bottom_depth, dry_mass, volume, bd) %>% 
   filter(forest %in% c("ARB_ref", "LR_ref"))
 
 
-# Join refernece samples collect with ring method and probe method
-
-
+# Join reference samples collect with ring method and probe method
 joined = left_join(probe_ref, ref_bd, by = c("site", "bottom_depth")) %>% 
   select(site, bottom_depth, bd, mean)
 
