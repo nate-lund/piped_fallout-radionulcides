@@ -1,0 +1,14 @@
+name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
+libs|object|c53073227d607317
+.Random.seed|object|8a1708a8df9a7d5b
+installed_libs|object|3ac6a220332aaa45
+energy_cal_tka|function|c9143183018e0671
+tka_files|stem|096a88c0fd4ce0a7|309218a003721f8a|2c530c1562a7fbd1|637062561||t20616.9041455405s|s161b|161|rds|local|vector||tka_files_a75c23a2132d636c*tka_files_2c89edcebbb3626d*tka_files_5f8c1c8c55f9348d*tka_files_31e90084b6e125a8*tka_files_d009243d4f478426*tka_files_f9cd8109ce7f300c|0||
+spectra_2e52922180ebdeb1|branch|70c61457cb2acf9e|52dedf61a97d3161|0a3de2af9577abc6|-173416819||t20616.904146955s|s64832b|64832|rds|local|list|spectra||0.02||
+spectra_44609f4292e5c1ab|branch|020a12b4859d6d3d|52dedf61a97d3161|0a3de2af9577abc6|1835308997||t20616.9041473301s|s64918b|64918|rds|local|list|spectra||0||
+spectra_232d5e2547ca3604|branch|d65d106467e3ac63|52dedf61a97d3161|0a3de2af9577abc6|-1911731304||t20616.9041477614s|s65199b|65199|rds|local|list|spectra||0.02||
+spectra_bb8bb293521fcb16|branch|ba77da3143c50ba7|52dedf61a97d3161|0a3de2af9577abc6|1991965757||t20616.9041481657s|s65375b|65375|rds|local|list|spectra||0.02||
+spectra_e0dd00570bd106ce|branch|c5885f5685a4ec38|52dedf61a97d3161|0a3de2af9577abc6|1974047904||t20616.9041485943s|s65366b|65366|rds|local|list|spectra||0.02||
+spectra_f752a3b6ee09d9cd|branch|c261b0f64827493a|52dedf61a97d3161|0a3de2af9577abc6|-367460845||t20616.9041490375s|s65568b|65568|rds|local|list|spectra||0.01||
+spectra|pattern|5161da967d323773|52dedf61a97d3161||-1168745767||||391258|rds|local|list||spectra_2e52922180ebdeb1*spectra_44609f4292e5c1ab*spectra_232d5e2547ca3604*spectra_bb8bb293521fcb16*spectra_e0dd00570bd106ce*spectra_f752a3b6ee09d9cd|0.09||
+all_spectra|stem|cb6e6fcefffff701|bfa2c4901e5fb90b|13cfcbd7176dedc0|1133129187||t20616.9041505458s|s476885b|476885|rds|local|vector|||0||
