@@ -55,6 +55,10 @@ inventory2 = inventory %>%
     bd = dry_mass / volume
   )
 
+# For looking at extra mass leftover from marinelli
+inventory3 = inventory2 %>% 
+  mutate(excess = dry_mass - labeled_marinelli - filled_marinelli)
+
 
 #================================ BD Worm difference ================================
 
