@@ -9,18 +9,20 @@ energy_cal_tka = function(file_path){
   tka <- readLines(file_path) %>% 
     as.numeric()
   
+  # Strip the extension from the file path
+  file = tools::file_path_sans_ext(basename(file_path))
+  
   # First two lines are live time and real time
   live_time <- tka[1]
   real_time <- tka[2]
   
-  # Remaining values are counts per channel
-  counts <- tka[3:length(tka)] # Raw data
-  channels <- seq_along(counts) # Essential the row of the TKA
+  # Pull just counts
+  counts = tka[3:length(tka)] # Raw data
   
   # Build dataframe
   tka_df <- tibble(
-    channel = channels,
-    counts = counts
+    channel = seq_along(counts), # Essential the row of the TKA,
+    counts = counts # Raw data
   )
   
   # Define calibration coefs from cal file
@@ -30,28 +32,44 @@ energy_cal_tka = function(file_path){
   c = 2.357e-18
   
   # Create energy calibration function
-  calibrate = function(channels){
-    keV <-a + b * channels - c * channels^2
+  calibrate = function(channel){
+    keV <-a + b * channel - c * channel^2
   }
   
   # Apply energy calibration
-  spectrum = tka_df %>% 
-    mutate(kev = calibrate(channels))
+  tka_df = tka_df %>% 
+    mutate(kev = calibrate(channel))
+  
+  spectrum = list(tka_df, file, live_time, real_time)
   
   return(spectrum)
 }
 
 
-# # Plot
-# ggplot(spectrum, aes(x = kev, y = counts)) +
-#   geom_point() +
-#   #coord_cartesian(xlim = c(40, 50)) +
-#   coord_cartesian(xlim = c(655, 670)) +
-#   geom_vline(xintercept = 661.7, linetype = "dashed", color = "red") +
-#   labs(
-#     title = file,
-#     x = "Channel",
-#     y = "Counts",
-#     subtitle = paste0("Live time: ", round(live_time), "s | Real time: ", round(real_time), "s")
-#   ) +
-#   theme_minimal()
+
+#================================ Plot spectra ================================
+
+#' [Test code]
+# spectrum = tar_read(spectra_2e52922180ebdeb1)
+
+plot_spectra = function(spectrum){
+  
+  ggplot = ggplot(spectrum[[1]], aes(x = kev, y = counts)) +
+    geom_point() +
+    #coord_cartesian(xlim = c(40, 50)) +
+    coord_cartesian(xlim = c(655, 670)) +
+    geom_vline(xintercept = 661.7, linetype = "dashed", color = "red") +
+    labs(
+      title = spectrum[[2]],
+      x = "Channel",
+      y = "Counts",
+      subtitle = paste0("Live time: ", round(spectrum[[3]]), "s | Real time: ", round(spectrum[[4]]), "s")
+    ) +
+    theme_minimal()
+  
+  # Also saves the plot to the _plots_outputs folder for furture reference
+  out_path = paste0("_plot_outputs/plot_", spectrum[[2]], ".png")
+  ggsave(out_path, ggplot, width = 8, height = 6)
+  
+  return(out_path)
+}

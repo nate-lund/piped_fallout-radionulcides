@@ -3,6 +3,8 @@
 # Clear environment
 rm(list = ls(all.names = TRUE))
 
+?rm()
+
 # libraries needed
 libs <- c("httr", "jsonlite", "ggplot2", "terra", "leaflet", "ncdf4", "tidyr", "dplyr", "readr", "targets", "usethis", "sf", "targets", "visNetwork", "tarchetypes", "tidyterra", "performance", "see", "RColorBrewer", "lme4", "nlme", "readxl", "writexl", "emmeans", "splines", "lspline", "ggeffects", "lubridate", "cowplot", "gridGraphics", "broom", "DT", "flextable", "wesanderson", "ggspatial", "extrafont")
 
@@ -36,8 +38,10 @@ list(
   ## List all TKA files in destination folder ====
   tar_target(
     tka_files,
-    list.files("_data", pattern = "\\.TKA$", full.names = TRUE)
-  ),
+    #  list.files("_data", pattern = "\\.TKA$", full.names = TRUE), Code for testing
+    list.files("C:/Users/natha/Box/_data/_fallout_radionuclides/Popeye_CAM-TKA/Popeye_CAM-TKA", pattern = "\\.TKA$", full.names = TRUE),
+    cue = tar_cue(mode = "always")
+    ),
   
   ## Energy calibrate each file (one branch per file) ====
   tar_target(
@@ -45,19 +49,18 @@ list(
     energy_cal_tka(tka_files),
     pattern = map(tka_files),
     iteration = "list"
-  ),
+    ),
   
-  ## Combine all into one dataframe ====
+  ## Plot each spectra ====
   tar_target(
-    all_spectra,
-    bind_rows(spectra)
-  )
-)
+    spectra_plots,
+    plot_spectra(spectra),
+    pattern = map(spectra),
+    iteration = "list",
+    format = "file"
+    )
 
-ggplot(data= tar_read(all_spectra), aes(x = kev, y = counts)) +
-  geom_line(linewidth = 0.3) +
-  facet_wrap(~file, ncol = 1) +
-  theme_minimal()
+)
 
 
 #================================ Run Targets ================================
