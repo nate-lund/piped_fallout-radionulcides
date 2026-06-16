@@ -51,8 +51,6 @@ list(
     ),
   
   ## Calibrate blank ====
-  #' [Note] - Need to add the blank spectra to the "_blank" folder, will be
-  #' important to efficiency calibration.
   tar_target(
     blank,
     energy_cal_tka(list.files("_blank/", pattern = "\\.TKA$", full.names = TRUE))
@@ -67,14 +65,6 @@ list(
     iteration = "list"
   ),
   
-    
-  ## Bind all spectra into a list ====
-  tar_target(
-    spectra_list,
-    as.list(efcal_spectra)
-  ),
-  
-  
   ## Plot each spectra ====
   tar_target(
     spectra_plots,
@@ -82,6 +72,32 @@ list(
     pattern = map(efcal_spectra),
     iteration = "list",
     format = "file"
+  ),
+    
+  ## Bind all spectra into a list ====
+  tar_target(
+    spectra_list,
+    as.list(efcal_spectra)
+  ),
+  
+  ## Peak area computations for each spectrum ====
+  tar_target(
+    peak_counts,
+    compute_peak_counts(efcal_spectra),
+    pattern = map(efcal_spectra),
+    iteration = "list"
+  ),
+  
+  ## Bind peak count dfs ====
+  tar_target(
+    all_peak_counts,
+    bind_rows(peak_counts)
+  ),
+  
+  ## Load sample data ====
+  tar_target(
+    sample_inventory,
+    read_xlsx("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample_inventory.xlsx")
     )
 
 )
@@ -89,10 +105,17 @@ list(
 
 #================================ Run Targets ================================
   
+# Visialize the worlfow
 # tar_visnetwork()
 
+# Clear _targets/objects
+# tar_prune() 
+
+# Run the workflow
 # tar_make()
 
+# View errors
 # tar_meta(fields = error, complete_only = TRUE)
 
+# Read a single file
 # tar_read()

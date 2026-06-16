@@ -63,37 +63,33 @@ efficiency_cal_tka = function(spectrum){
   
   # Apply calibration
   efcal_spectrum[[1]] = spectrum[[1]] %>% 
-    mutate(real_count = (count * 1 / efficiency_cal(kev)))
-
-  ggplot(data = efcal_spectrum[[1]], mapping = aes(x = kev, y = real_count)) +
-    scale_y_continuous(limits = c(0, 100000)) +
-    scale_x_continuous(limits = c(650, 670)) +
-    geom_point()
+    mutate(eff_count = (count * 1 / efficiency_cal(kev)))
 
   return(efcal_spectrum)
 }
 
 
-
-
-
 #================================ Plot spectra ================================
 
 #' [Test code]
-# spectrum = tar_read(spectra_list)[[1]]
+# spectrum = tar_read(spectra_list)[[15]]
 
 plot_spectra = function(spectrum){
   
-  ggplot = ggplot(spectrum[[1]], aes(x = kev, y = real_count)) +
+  ggplot = ggplot(spectrum[[1]], aes(x = kev, y = eff_count)) +
     geom_point() +
     #coord_cartesian(xlim = c(40, 50)) +
     coord_cartesian(xlim = c(655, 670),
                     ylim = c(0, 40000)) +
-    geom_vline(xintercept = 661.7, linetype = "dashed", color = "red") +
+    # Vertical line at 661.7 kev, should be peak
+    geom_vline(xintercept = 661.7,  color = "red") +
+    # Vertical line at approximate peak ends,
+    geom_vline(xintercept = 661.7 - 2, linetype = "dashed", color = "red") + # Lower
+    geom_vline(xintercept = 661.7 + 2, linetype = "dashed", color = "red") + # Upper
     labs(
       title = spectrum[[2]],
       x = "Kev",
-      y = "real_coutns",
+      y = "eff_counts",
       subtitle = paste0("Live time: ", round(spectrum[[3]]), "s | Real time: ", round(spectrum[[4]]), "s")
     ) +
     theme_minimal()
@@ -105,5 +101,106 @@ plot_spectra = function(spectrum){
   return(out_path)
 }
 
+
+#================================ Compute Peak Area ================================
+
+#' [Test Code]
+# spectrum = tar_read(spectra_list)[[1]]
+
+compute_peak_counts = function(spectrum){
+  
+  # Half of peak width in channels , using 12 for 137-Cs
+  peak_width = 12 
+  
+  # Background widths
+  upper_width = 6 # Upper
+  lower_width = 18 # Lower
+  
+  # Peak kev
+  peak_kev = 661.7 # for 137-Cs
+  
+  
+  # Identify peak channel, i.e. the channel with a kev closest to peak kev
+  peak_channel = spectrum[[1]] %>%
+    mutate(diff = abs(kev - peak_kev),
+           peak = if_else(diff == min(diff), 1, 0)) %>%
+    filter(peak == 1) %>% 
+    select(channel) %>% 
+    as.numeric()
+  
+  # Subset spectrum for only peak energies
+  peak = spectrum # Copy metadata
+  peak[[1]] = spectrum[[1]] %>% 
+    filter(channel >= peak_channel - peak_width & # uses width above
+             channel <= peak_channel + peak_width)
+ 
+  
+  # Compute net peak area
+  N_net = sum(peak[[1]]["eff_count"])
+  
+  # Subset spectrum for only background energies
+  background = spectrum # Copy metadata
+  background[[1]] = spectrum[[1]] %>% 
+    filter(
+      # Lower
+      (channel <= peak_channel - peak_width - 1 &
+             channel >= peak_channel - peak_width - lower_width)
+      | # Or
+        
+        # Upper
+        (channel >= peak_channel + peak_width + 1 &
+           channel <= peak_channel + peak_width + upper_width)
+        )
+
+  # Compute the background peak area
+  N_bg = sum(background[[1]]["eff_count"]) * (2 * peak_width + 1) / (lower_width + upper_width)
+  
+  # Compute total counts
+  N = N_net - N_bg
+  
+  out = data.frame(
+    N = N,
+    file = spectrum[[2]],
+    live_time = spectrum[[3]],
+    real_time = spectrum[[4]]
+  )
+  
+  return(out)
+  
+}
+
+
+#================================ Compute Activity ================================
+
+#' [Test code]
+# peak_counts = tar_read(all_peak_counts)
+
+# sample_inventory = tar_read(sample_inventory)
+
+compute_activity = function(peak_counts, sample_invetory){
+  
+  # Clean up the dataframe
+  file_inventory = peak_counts %>%
+    # Pull apart file name into unique columns
+    separate_wider_delim(
+      cols  = file,
+      delim = "_",
+      names = c("run_date", "initals", "detector", "sample", "geometry", "count_time")
+    ) %>% 
+    
+    # Pull apart sample name into parts
+    separate_wider_delim(
+      cols  = sample,
+      delim = "-",
+      names = c("year", "forest", "slope_pos"),
+      too_few  = "align_start", # rows with only 3 pieces -> extra = NA
+      too_many = "merge" # rows with 5+ pieces -> everything past slope_pos goes into extra
+    ) %>% 
+    
+    mutate(run_date = ymd(run_date))
+  
+  print(file_inventory, n = 46)
+  
+}
 
 
