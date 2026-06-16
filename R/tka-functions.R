@@ -1,7 +1,7 @@
-#================================ Read files ================================
+#================================ Energy Calibration ================================
 
 #' [Test code]
-# file_path = "_data/260311_NL_Popeye_LR-ref-0-5_Marinelli_24hr.TKA"
+# file_path = "C:/Users/natha/Box/_data/_fallout_radionuclides/Popeye_CAM-TKA/260522_NL_Popeye_2025-LRW-TS30_Marinelli_24hr.TKA"
 
 energy_cal_tka = function(file_path){
   
@@ -22,7 +22,7 @@ energy_cal_tka = function(file_path){
   # Build dataframe
   tka_df <- tibble(
     channel = seq_along(counts), # Essential the row of the TKA,
-    counts = counts # Raw data
+    count = counts # Raw data
   )
   
   # Define calibration coefs from cal file
@@ -32,13 +32,13 @@ energy_cal_tka = function(file_path){
   c = 2.357e-18
   
   # Create energy calibration function
-  calibrate = function(channel){
+  energy_cal = function(channel){
     keV <-a + b * channel - c * channel^2
   }
   
   # Apply energy calibration
   tka_df = tka_df %>% 
-    mutate(kev = calibrate(channel))
+    mutate(kev = energy_cal(channel))
   
   spectrum = list(tka_df, file, live_time, real_time)
   
@@ -46,23 +46,54 @@ energy_cal_tka = function(file_path){
 }
 
 
+#================================ Efficiency Calibration ================================
+
+#' [Test code]
+# spectrum = tar_read(spectra_list)[[2]]
+
+efficiency_cal_tka = function(spectrum){
+  
+  # Create a function for the calibration equation,
+  # this set is from "Popeye_2026EZ-Marinelli_order2_Mar05_2026" 
+  efficiency_cal <- function(E) {10^(-2.993e-04*E -1.546e00 + 1.185e02/E - 9.472e03/E^2 + 6.118e04/E^3)
+  }
+  
+  # Copy to preserve list metadata
+  efcal_spectrum = spectrum
+  
+  # Apply calibration
+  efcal_spectrum[[1]] = spectrum[[1]] %>% 
+    mutate(real_count = (count * 1 / efficiency_cal(kev)))
+
+  ggplot(data = efcal_spectrum[[1]], mapping = aes(x = kev, y = real_count)) +
+    scale_y_continuous(limits = c(0, 100000)) +
+    scale_x_continuous(limits = c(650, 670)) +
+    geom_point()
+
+  return(efcal_spectrum)
+}
+
+
+
+
 
 #================================ Plot spectra ================================
 
 #' [Test code]
-# spectrum = tar_read(spectra_2e52922180ebdeb1)
+# spectrum = tar_read(spectra_list)[[1]]
 
 plot_spectra = function(spectrum){
   
-  ggplot = ggplot(spectrum[[1]], aes(x = kev, y = counts)) +
+  ggplot = ggplot(spectrum[[1]], aes(x = kev, y = real_count)) +
     geom_point() +
     #coord_cartesian(xlim = c(40, 50)) +
-    coord_cartesian(xlim = c(655, 670)) +
+    coord_cartesian(xlim = c(655, 670),
+                    ylim = c(0, 40000)) +
     geom_vline(xintercept = 661.7, linetype = "dashed", color = "red") +
     labs(
       title = spectrum[[2]],
-      x = "Channel",
-      y = "Counts",
+      x = "Kev",
+      y = "real_coutns",
       subtitle = paste0("Live time: ", round(spectrum[[3]]), "s | Real time: ", round(spectrum[[4]]), "s")
     ) +
     theme_minimal()
@@ -73,3 +104,6 @@ plot_spectra = function(spectrum){
   
   return(out_path)
 }
+
+
+

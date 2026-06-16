@@ -1,4 +1,4 @@
-#================================ Pacakges ================================
+#================================ Packages ================================
 
 # Clear environment
 rm(list = ls(all.names = TRUE))
@@ -38,24 +38,48 @@ list(
   ## List all TKA files in destination folder ====
   tar_target(
     tka_files,
-    #  list.files("_data", pattern = "\\.TKA$", full.names = TRUE), Code for testing
-    list.files("C:/Users/natha/Box/_data/_fallout_radionuclides/Popeye_CAM-TKA/Popeye_CAM-TKA", pattern = "\\.TKA$", full.names = TRUE),
+    list.files("C:/Users/natha/Box/_data/_fallout_radionuclides/Popeye_CAM-TKA", pattern = "\\.TKA$", full.names = TRUE),
     cue = tar_cue(mode = "always")
     ),
   
   ## Energy calibrate each file (one branch per file) ====
   tar_target(
-    spectra,
+    encal_spectra,
     energy_cal_tka(tka_files),
     pattern = map(tka_files),
     iteration = "list"
     ),
   
+  ## Calibrate blank ====
+  #' [Note] - Need to add the blank spectra to the "_blank" folder, will be
+  #' important to efficiency calibration.
+  tar_target(
+    blank,
+    energy_cal_tka(list.files("_blank/", pattern = "\\.TKA$", full.names = TRUE))
+    ),
+  
+  
+  ## Efficiency calibrate each spectra ====
+  tar_target(
+    efcal_spectra,
+    efficiency_cal_tka(encal_spectra),
+    pattern = map(encal_spectra),
+    iteration = "list"
+  ),
+  
+    
+  ## Bind all spectra into a list ====
+  tar_target(
+    spectra_list,
+    as.list(efcal_spectra)
+  ),
+  
+  
   ## Plot each spectra ====
   tar_target(
     spectra_plots,
-    plot_spectra(spectra),
-    pattern = map(spectra),
+    plot_spectra(efcal_spectra),
+    pattern = map(efcal_spectra),
     iteration = "list",
     format = "file"
     )
