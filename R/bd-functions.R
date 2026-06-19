@@ -110,6 +110,31 @@ binded = bind_rows(runoff_plots1, frn_ref1, frn_inventory1, baumann1, .id = "dat
   ))
          
 
+#================================ Mess with RP data ================================
+
+runoff_plots1
+
+# Pivot table to wide, easier time with plotting
+runoff_plots_wide <- runoff_plots1 %>%
+  pivot_wider(
+    id_cols     = c(forest, plot, replicate),
+    names_from  = c(sample, bottom_depth),
+    values_from = bd,
+    names_glue  = "{sample}_{bottom_depth}cm"
+  )
+
+ggplot(data = runoff_plots_wide, mapping = aes(x = `bd-ring_5cm`,
+                                               y= `bd-probe_5cm`)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed")
+
+
+
+
+#================================ Plot together ================================
+
+
+
 datatable(binded)
 
 ggplot(data = binded, mapping = aes(x = bd,
