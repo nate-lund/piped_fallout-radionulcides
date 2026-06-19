@@ -60,7 +60,6 @@ efficiency_cal_tka = function(spectrum){
   
   # Copy to preserve list metadata
   efcal_spectrum = spectrum
-  
   # Apply calibration
   efcal_spectrum[[1]] = spectrum[[1]] %>% 
     mutate(eff_count = (count * 1 / efficiency_cal(kev)))
@@ -173,11 +172,11 @@ compute_peak_counts = function(spectrum){
 #================================ Compute Activity ================================
 
 #' [Test code]
-# peak_counts = tar_read(all_peak_counts)
+# peak_counts = tar_read(all_peak_counts); sample_inventory = tar_read(sample_inventory)
 
-# sample_inventory = tar_read(sample_inventory)
 
-compute_activity = function(peak_counts, sample_invetory){
+
+compute_activity = function(peak_counts, sample_inventory){
   
   # Clean up the dataframe
   file_inventory = peak_counts %>%
@@ -193,14 +192,90 @@ compute_activity = function(peak_counts, sample_invetory){
       cols  = sample,
       delim = "-",
       names = c("year", "forest", "slope_pos"),
-      too_few  = "align_start", # rows with only 3 pieces -> extra = NA
-      too_many = "merge" # rows with 5+ pieces -> everything past slope_pos goes into extra
+      too_few  = "align_start", 
+      too_many = "merge" 
     ) %>% 
     
-    mutate(run_date = ymd(run_date))
+    mutate(
+      run_date = ymd(run_date),
+      year = as.numeric(year))
   
-  print(file_inventory, n = 46)
+  # Clean up sample inventory
+  sample_inventory = sample_inventory %>% 
+    mutate(
+      sample_date = as.Date(sample_date),
+      sample_mass = filled_marinelli - labeled_marinelli
+    )
   
+  # Join file and sample inventories, keeping all columns
+  joined_inventory = full_join(file_inventory,
+                               sample_inventory,
+                               by = c("forest", "year", "slope_pos"))
+  
+
+  # Define a function to compute activity (based on IAEA), will compute
+  # activity in units of Bq / kg
+  computue_activity = function(peak_area, decay_constant, counting_time,
+                               sample_time, run_time, sample_mass,
+                               emission_prob){
+    
+    # Compute time difference
+    time_diff = as.numeric(difftime(run_time, sample_time, units = "secs"))
+    
+    activity = (peak_area * exp(decay_constant * time_diff)) /
+      (emission_prob * sample_mass * counting_time)
+    
+    return(activity)
+    
+    }
+  
+  # Compute activity
+  activity_inventory = joined_inventory %>% 
+    mutate(
+      activity = computue_activity(peak_area = N,
+                                   decay_constant = log(2)/30.17 / 31557600, # 137Cs
+                                   counting_time = live_time,
+                                   sample_time = sample_date,
+                                   run_time = run_date,
+                                   sample_mass = sample_mass / 1000, # Convert to kg
+                                   emission_prob = 0.85) # 137Cs
+    ) %>% 
+  
+  return(activity_inventory)
 }
+
+
+
+#================================ Compute Activity ================================
+
+#' [Test code]
+# activity_inventory = tar_read(activity_inventory)
+
+datatable(activity_inventory)
+
+plot_activity = function(activities){
+  
+  eros_data = activity_inventory %>%
+    filter(forest %in% c("ASH", "WD", "MAG", "LRE", "LRW", "LRJ")) %>%
+    mutate(forest = factor(forest, levels = c("ASH", "LRE", "LRW", "MAG", "WD", "LRJ"))) %>% 
+    mutate(slope_pos = factor(slope_pos, levels = c("SU", "SH", "BS3", "BS2", "BS1", "FS30",
+                                                 "TS30", "FS60", "TS60", "FS", "TS")))
+  
+  ggplot(data = eros_data, mapping = aes(x = slope_pos, y = activity)) +
+    geom_point() +
+    facet_wrap(~forest)
+  
+  ref_data = activity_inventory %>%
+    filter(!(forest %in% c("ASH", "WD", "MAG", "LRE", "LRW", "LRJ"))) %>%
+    mutate(slope_pos = factor(slope_pos, levels = c("ref-0-5", "ref-5-10", "ref-10-15",
+                                                    "ref-15-20", "ref-20-25", "ref-25-30")))
+  
+  ggplot(data = ref_data, mapping = aes(x = activity, y = slope_pos)) +
+    geom_point() +
+    facet_wrap(~forest)
+  
+    
+}
+
 
 

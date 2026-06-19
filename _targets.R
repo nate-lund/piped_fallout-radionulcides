@@ -98,7 +98,13 @@ list(
   tar_target(
     sample_inventory,
     read_xlsx("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample_inventory.xlsx")
-    )
+    ),
+  
+ ## Compute activity in Bq / kg ===
+ tar_target(
+   activity_inventory,
+   compute_activity(all_peak_counts, sample_inventory)
+ )
 
 )
 
@@ -109,7 +115,7 @@ list(
 # tar_visnetwork()
 
 # Clear _targets/objects
-# tar_prune() 
+# tar_destroy(destroy = c("objects"))
 
 # Run the workflow
 # tar_make()
