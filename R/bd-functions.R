@@ -15,14 +15,130 @@ if (any(installed_libs == F)) {
 # load libraries
 lapply(libs, library, character.only = T)
 
-#================================ X ================================
+#================================ Pull BD Data sets ================================
 
-path = "G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/reference-bulk-density.xlsx"
-ref_bd_raw = read_excel(path)
 
-ggplot(data = ref_bd_raw, mapping = aes(x = bd, y = -bottom_depth, color = site)) +
-  geom_point()
+# Runoff plot data 
+runoff_plots = read_excel("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Runoff-Plots/soil-samples.xlsx")
 
+# FRN reference data
+frn_ref = read_excel("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/reference-bulk-density.xlsx")
+
+# FRN full inventory (little of this is segmented)
+frn_inventory = read_excel("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample_inventory.xlsx")
+
+# Baumann et al. (2025) data
+baumann = read_excel("C:/Users/natha/Box/_data/_outside_data/Baument-et-al_BD-values.xlsx")
+
+
+
+# 1. Produce a few index columns.
+# Forest: ASH, MAG, WD, LRJ, LRE, LRW, AREF, LREF
+# Earthworm: JW, EW (add this by forest at end)
+# Method: ring, probe
+# Depth: 0, 5, 10, 15, 20, 25, 30
+# Height: 5, 10, 30, 60
+# Buld density (bd)
+
+# Runoff plots
+runoff_plots1 = runoff_plots %>% 
+  drop_na(boat_soil) %>% 
+  mutate(
+    worms = NA,
+    method = case_when(
+      sample == "bd-ring" ~ "ring",
+      sample == "bd-probe" ~ "probe"
+    )
+  )
+
+
+# FRN reference data
+frn_ref1 = frn_ref %>%
+  mutate(
+    method = "ring",
+    worms = NA,
+    sample_date = as.Date(sample_date)
+  )
+
+
+# FRN inventory
+frn_inventory1 = frn_inventory %>% 
+  drop_na(tin_plus_soil) %>% 
+  mutate(
+    sample_mass = tin_plus_soil - tin,
+    volume = height * probe_pushes * (pi*(probe_diameter/2)^2),
+    bd = sample_mass / volume,
+    method = "probe",
+    worms = NA,
+    sample_date = as.Date(sample_date)
+   )
+  
+
+# Baumann et al. (2025) data
+baumann1 = baumann %>%
+  mutate(
+    forest = case_when(
+      Forest == "Acer" ~ "ACE",
+      Forest == "Magnolia" ~ "MAG",
+      Forest == "WoodDuck" ~ "WD",
+    ),
+    worms = case_when(
+      Worm_Type == "L" ~ "EW",
+      Worm_Type == "A" ~ "JW"
+    ),
+    bottom_depth = case_when(
+      Depth_cm == "0-5" ~ 5,
+      Depth_cm == "5-10" ~ 10,
+      Depth_cm == "10-15" ~ 15
+    ),
+    height = 5,
+    bd = `Bulk_Density (g/cm^3)`,
+    method = "?"
+  )
+
+# Bind all datasets together
+binded = bind_rows(runoff_plots1, frn_ref1, frn_inventory1, baumann1, .id = "dataset") %>% 
+  
+  # Fill worms column 
+  mutate(worms = if_else(
+    dataset != "4",
+    case_when(
+      forest %in% c("ASH", "LRE", "LRW", "AREF", "LREF") ~ "EW",
+      forest %in% c("MAG", "WD", "LRJ") ~ "JW"
+    ),
+    worms
+  ))
+         
+
+datatable(binded)
+
+ggplot(data = binded, mapping = aes(x = bd,
+                          y = -bottom_depth,
+                          color = worms,
+                          group = interaction(bottom_depth, worms))) +
+  geom_point(aes(shape = dataset)) +
+#  geom_boxplot(orientation = "y") +
+  scale_y_continuous(limits = c(0, -60)) +
+  facet_wrap(~forest)
+
+
+ggplot(binded, aes(x = bd)) +
+  geom_histogram(bins = 20)  
+
+?geom_boxplot
+
+
+
+
+
+
+
+
+
+
+
+
+#================================ Testing ================================
 
 ref_bd = ref_bd_raw %>% 
   # Remove root ball sample

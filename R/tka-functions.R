@@ -283,7 +283,7 @@ plot_activity = function(activities){
                                                  "TS30", "FS60", "TS60", "FS", "TS"))) %>% 
     group_by(forest, slope_pos) %>%
     summarise(activity_m3 = mean(activity_m3), .groups = "drop") %>% # Removes replicate LRW samples for now
-    ungroup() %>% 
+    ungroup()
   
   ggplot(data = eros_data, mapping = aes(x = slope_pos, y = activity_m3)) +
     geom_col() +
