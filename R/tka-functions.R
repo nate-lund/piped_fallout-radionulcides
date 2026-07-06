@@ -233,26 +233,25 @@ compute_activity = function(peak_counts, sample_inventory){
   activity_inventory = joined_inventory %>% 
     mutate(
       # Compute activity using the function
-      activity_kg = computue_activity(peak_area = N,
-                                   decay_constant = log(2)/30.17 / 31557600, # 137Cs
-                                   counting_time = live_time,
-                                   sample_time = sample_date,
-                                   run_time = run_date,
-                                   sample_mass = sample_mass / 1000, # Convert to kg
-                                   emission_prob = 0.85) # 137Cs
+      activity_g = computue_activity(peak_area = N,
+                                      decay_constant = log(2)/30.17 / 31557600, # 137Cs
+                                      counting_time = live_time,
+                                      sample_time = sample_date,
+                                      run_time = run_date,
+                                      sample_mass = sample_mass,
+                                      emission_prob = 0.85) # 137Cs
     ) %>% 
     
     # Provide a bd-correct value too
     mutate(
       bd = sample_mass / (probe_pushes * height * (pi * (probe_diameter/2)^2)),
-      activity_m3 = activity_kg  * bd
+      activity_cm3 = activity_g  * bd
     )
     
     
   
   return(activity_inventory)
 }
-
 
 
 #================================ Convert Actibity to Length ================================
@@ -268,10 +267,9 @@ bd_correction = function(activity_invetory){
 #' [Test code]
 # activity_inventory = tar_read(activity_inventory)
 
-# datatable(activity_inventory)
-
 plot_activity = function(activities){
   
+  # Filter erosion data from reference data
   eros_data = activity_inventory %>%
     filter(
       forest %in% c("ASH", "WD", "MAG", "LRE", "LRW", "LRJ") &
@@ -282,13 +280,15 @@ plot_activity = function(activities){
     mutate(slope_pos = factor(slope_pos, levels = c("SU", "SH", "BS3", "BS2", "BS1", "FS30",
                                                  "TS30", "FS60", "TS60", "FS", "TS"))) %>% 
     group_by(forest, slope_pos) %>%
-    summarise(activity_m3 = mean(activity_m3), .groups = "drop") %>% # Removes replicate LRW samples for now
+    summarise(activity_cm3 = mean(activity_cm3), .groups = "drop") %>% # Removes replicate LRW samples for now
     ungroup()
   
-  ggplot(data = eros_data, mapping = aes(x = slope_pos, y = activity_m3)) +
+  # Plot erosion data
+  ggplot(data = eros_data, mapping = aes(x = slope_pos, y = activity_cm3)) +
     geom_col() +
     facet_wrap(~forest)
   
+  # Filter reference data from erosion data
   ref_data = activity_inventory %>%
     filter(
       slope_pos %in% c("ref-25-30", "ref-20-25", "ref-15-20", "ref-10-15", "ref-5-10", "ref-0-5")
@@ -297,7 +297,8 @@ plot_activity = function(activities){
       slope_pos = factor(slope_pos, levels = c("ref-25-30", "ref-20-25", "ref-15-20", "ref-10-15", "ref-5-10", "ref-0-5"))
       ) 
   
-  ggplot(data = ref_data, mapping = aes(x = activity_m3, y = slope_pos)) +
+  # Plot reference data
+  ggplot(data = ref_data, mapping = aes(x = activity_g, y = slope_pos)) +
     geom_col(width = 0.96) +
     facet_wrap(~forest, ncol = 1)
   

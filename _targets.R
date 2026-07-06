@@ -92,7 +92,7 @@ list(
   ## Load sample data ====
   tar_target(
     sample_inventory,
-    read_xlsx("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample_inventory.xlsx")
+    read_xlsx("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample-inventory.xlsx")
     ),
   
  ## Compute activity in Bq / kg ===
