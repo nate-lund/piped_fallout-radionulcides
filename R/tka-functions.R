@@ -298,7 +298,7 @@ plot_activity = function(activities){
       ) 
   
   # Plot reference data
-  ggplot(data = ref_data, mapping = aes(x = activity_g, y = slope_pos)) +
+  ggplot(data = ref_data, mapping = aes(x = activity_cm3, y = slope_pos)) +
     geom_col(width = 0.96) +
     facet_wrap(~forest, ncol = 1)
   
