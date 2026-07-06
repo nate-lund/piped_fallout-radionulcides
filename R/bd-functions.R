@@ -17,7 +17,6 @@ lapply(libs, library, character.only = T)
 
 #================================ Pull BD Data sets ================================
 
-
 # Runoff plot data 
 runoff_plots = read_excel("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Runoff-Plots/soil-samples.xlsx")
 
@@ -25,7 +24,7 @@ runoff_plots = read_excel("G:/Shared drives/P05-mitppc-jumpingwormerosion/Projec
 frn_ref = read_excel("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/reference-bulk-density.xlsx")
 
 # FRN full inventory (little of this is segmented)
-frn_inventory = read_excel("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample_inventory.xlsx")
+frn_inventory = read_excel("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample-inventory.xlsx")
 
 # Baumann et al. (2025) data
 baumann = read_excel("C:/Users/natha/Box/_data/_outside_data/Baument-et-al_BD-values.xlsx")
@@ -58,7 +57,9 @@ frn_ref1 = frn_ref %>%
     method = "ring",
     worms = NA,
     sample_date = as.Date(sample_date)
-  )
+  ) %>% 
+  # Remove root ball sample
+  filter(!(forest == "AREF" & replicate == "B" & bottom_depth == 5))
 
 
 # FRN inventory
@@ -110,6 +111,27 @@ binded = bind_rows(runoff_plots1, frn_ref1, frn_inventory1, baumann1, .id = "dat
   ))
          
 
+
+#================================ Plot together ================================
+
+# See per forest
+ggplot(data = binded, mapping = aes(x = bd,
+                                    y = -bottom_depth,
+                                    color = method,
+                                    group = interaction(bottom_depth, worms))) +
+  geom_point(aes(shape = dataset)) +
+  #  geom_boxplot(orientation = "y") +
+  scale_y_continuous(limits = c(0, -60)) +
+  facet_wrap(~forest +worms)
+
+# See hisogram
+ggplot(binded, aes(x = bd)) +
+  geom_histogram(bins = 20)  
+
+
+
+
+
 #================================ Mess with RP data ================================
 
 runoff_plots1
@@ -123,121 +145,69 @@ runoff_plots_wide <- runoff_plots1 %>%
     names_glue  = "{sample}_{bottom_depth}cm"
   )
 
-ggplot(data = runoff_plots_wide, mapping = aes(x = `bd-ring_5cm`,
-                                               y= `bd-probe_5cm`)) +
+# plot ring vs probe
+rp_plot = ggplot(data = runoff_plots_wide, mapping = aes(x = `bd-ring_5cm`,
+                                                         y = `bd-probe_5cm`,
+                                                         color = forest,
+                                                         shape = plot)) +
   geom_point() +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed")
 
 
 
 
-#================================ Plot together ================================
 
 
 
-datatable(binded)
+#================================ Comapre Ref Samples ================================
 
-ggplot(data = binded, mapping = aes(x = bd,
-                          y = -bottom_depth,
-                          color = worms,
-                          group = interaction(bottom_depth, worms))) +
-  geom_point(aes(shape = dataset)) +
-#  geom_boxplot(orientation = "y") +
-  scale_y_continuous(limits = c(0, -60)) +
-  facet_wrap(~forest)
+# Take the mean of the refernece samples
+mean_frn_ref = frn_ref1 %>% 
+  #group_by(forest, bottom_depth) %>% 
+  #summarise(mean = mean(bd)) %>% 
+  #ungroup()
 
+# Join dfs
+inventory_ref = full_join(frn_inventory1, mean_frn_ref)
 
-ggplot(binded, aes(x = bd)) +
-  geom_histogram(bins = 20)  
+# Plot
+inven_plot = ggplot(data = inventory_ref, mapping = aes(x = mean, y = bd, color = bottom_depth)) +
+  geom_point() +
+  labs(x = "ring", y = "probe") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed")
 
-?geom_boxplot
+# Plot all BD ref
+plot_grid(plotlist = c(inven_plot, rp_plot), ncol = 1)
 
-
-
-
-
-
-
-
-
-
-
-
-#================================ Testing ================================
-
-ref_bd = ref_bd_raw %>% 
-  # Remove root ball sample
-  filter(!(site == "ARB" & replicate == "B" & bottom_depth == 5)) %>% 
-  group_by(site, bottom_depth) %>% 
-  summarise(mean = mean(bd)) %>% 
-  ungroup()
-
-
-path2 = "G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample_inventory.xlsx"
-inventory = read_excel(path2)
-
-
-inventory2 = inventory %>%
-  mutate(
-    # Compute dry mass
-    dry_mass = tin_plus_soil - tin,
-    
-    # Assign volumes based on the number of sampling points and volume of sample
-    volume = case_when(
-      forest %in% c("ASH", "WD", "MAG") ~ "510",
-      forest %in% c("LRJ", "LRW", "LRE") ~ "510",
-      forest == "ARB_ref" ~ "425", 
-      forest == "LR_ref" ~ "453.33",
-      TRUE ~ ""
-    ),
-    
-    volume = as.numeric(volume),
-    
-    bd = dry_mass / volume
-  )
 
 # For looking at extra mass leftover from marinelli
 inventory3 = inventory2 %>% 
   mutate(excess = dry_mass - labeled_marinelli - filled_marinelli)
 
 
-#================================ BD Worm difference ================================
-
-# Clean up df
-clean_inven = inventory2 %>% 
-  select(site, forest, slope_pos, bottom_depth, dry_mass, volume, bd) %>% 
-  filter(forest %in% c("ASH", "WD", "MAG", "LRJ", "LRW", "LRE")) %>% 
-  
-  # Order slope positions
-  mutate(
-    slope_pos = factor(slope_pos, levels = c("TS60", "FS60", "TS30", "FS30", "BS1", "BS2", "BS3", "SH", "SU")),
-    
-    worms = case_when(
-      forest %in% c("ASH", "LRE", "LRW") ~ "EW",
-      forest %in% c("MAG", "WD", "LRJ") ~ "JW"
-    )
-  )
 
 
-ggplot(data = clean_inven, mapping = aes(x = slope_pos, y = bd)) +
+
+#================================ Join comparative data sets ================================
+
+# Simplify inventory_ref
+inventory_ref1 = inventory_ref %>% 
+  select(year, forest, site, bd, mean, bottom_depth) %>% 
+  rename(probe = bd,
+         ring = mean) %>% 
+  filter(bottom_depth != 30)
+
+# Rename columns
+runoff_plots_wide1 = runoff_plots_wide %>% 
+  rename(ring = `bd-ring_5cm`,
+         probe = `bd-probe_5cm`)
+
+# Bind DFs
+rp_inv_ref = bind_rows(inventory_ref1, runoff_plots_wide1, .id = "dataset")
+
+# Plot
+ggplot(data = rp_inv_ref, mapping = aes(x = ring, y = probe, color = bottom_depth)) +
   geom_point() +
-  facet_wrap(~worms, ncol = 1)
-
-
-#================================ BD Probe testing ================================
-
-# Look at only reference samples
-probe_ref = inventory2 %>% 
-  select(site, forest, bottom_depth, dry_mass, volume, bd) %>% 
-  filter(forest %in% c("ARB_ref", "LR_ref"))
-
-
-# Join reference samples collect with ring method and probe method
-joined = left_join(probe_ref, ref_bd, by = c("site", "bottom_depth")) %>% 
-  select(site, bottom_depth, bd, mean)
-
-ggplot(data = joined, mapping = aes(x = bd, y = mean, color = bottom_depth)) +
-  geom_point() +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed")
-
-
+  labs(x = "ring", y = "probe") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  geom_smooth(method = "lm")
