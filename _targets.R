@@ -95,13 +95,41 @@ list(
     read_xlsx("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample-inventory.xlsx")
     ),
   
- ## Compute activity in Bq / kg ===
+ ## Compute activity in Bq / g ====
  tar_target(
    activity_inventory,
    compute_activity(all_peak_counts, sample_inventory)
- )
+ ),
 
+ ## Pull ring reference BD data ====
+ tar_target(
+   ref_bd_data,
+   read_xlsx("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/reference-bulk-density.xlsx")
+ ),
+ 
+ # ## Combine ring reference BD data and areal activity ====
+ # tar_target(
+ #   activity_inventory_bd,
+ #   c # WIP
+ # ),
+ 
+ ## Compute activity in Bq / m2 ====
+ tar_target(
+   activity_area,
+   compute_activity_area(activity_inventory)
+ ),
+ 
+ 
+ ## Plot sample inventories ====
+ tar_target(
+   activity_plots,
+   plot_activity(activity_area)
+ )
+ 
+ 
 )
+
+# tar_read(activity_plots)
 
 
 #================================ Run Targets ================================

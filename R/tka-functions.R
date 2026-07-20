@@ -53,8 +53,8 @@ energy_cal_tka = function(file_path){
 
 efficiency_cal_tka = function(spectrum){
   
-  # Create a function for the calibration equation,
-  # this set is from "Popeye_2026EZ-Marinelli_order2_Mar05_2026" 
+  # Create a function for the calibration equation, efficneicy at 661.7 is about 2.5%
+  # This set is from "Popeye_2026EZ-Marinelli_order2_Mar05_2026" 
   efficiency_cal <- function(E) {10^(-2.993e-04*E -1.546e00 + 1.185e02/E - 9.472e03/E^2 + 6.118e04/E^3)
   }
   
@@ -174,8 +174,6 @@ compute_peak_counts = function(spectrum){
 #' [Test code]
 # peak_counts = tar_read(all_peak_counts); sample_inventory = tar_read(sample_inventory)
 
-
-
 compute_activity = function(peak_counts, sample_inventory){
   
   # Clean up the dataframe
@@ -214,8 +212,8 @@ compute_activity = function(peak_counts, sample_inventory){
   
 
   # Define a function to compute activity (based on IAEA), will compute
-  # activity in units of Bq / kg
-  computue_activity = function(peak_area, decay_constant, counting_time,
+  # activity in units of Bq / g
+  activity_fun = function(peak_area, decay_constant, counting_time,
                                sample_time, run_time, sample_mass,
                                emission_prob){
     
@@ -233,74 +231,114 @@ compute_activity = function(peak_counts, sample_inventory){
   activity_inventory = joined_inventory %>% 
     mutate(
       # Compute activity using the function
-      activity_g = computue_activity(peak_area = N,
+      activity_g = activity_fun(peak_area = N,
                                       decay_constant = log(2)/30.17 / 31557600, # 137Cs
-                                      counting_time = live_time,
-                                      sample_time = sample_date,
-                                      run_time = run_date,
-                                      sample_mass = sample_mass,
+                                      counting_time = live_time, # in sec
+                                      sample_time = sample_date, # in sec
+                                      run_time = run_date, # in sec
+                                      sample_mass = sample_mass, # in g
                                       emission_prob = 0.85) # 137Cs
-    ) %>% 
-    
-    # Provide a bd-correct value too
-    mutate(
-      bd = sample_mass / (probe_pushes * height * (pi * (probe_diameter/2)^2)),
-      activity_cm3 = activity_g  * bd
     )
-    
-    
   
   return(activity_inventory)
 }
 
 
-#================================ Convert Actibity to Length ================================
-# This is only needed if outside bd data was collected 
+#================================ Activity Area Depth ================================
+# This requires a two pieces of information: sample BD and depth
 
-bd_correction = function(activity_invetory){
+#' [Test code]
+# activity_inventory = tar_read(activity_inventory)
+
+compute_activity_area = function(activity_inventory){
   
-  
+  # Compute
+  activity_area = activity_inventory %>% 
+    mutate(
+      
+      # Compute BD (g/cm3)
+      bd = (tin_plus_soil - tin) / (probe_pushes * height * (pi * (probe_diameter/2)^2)),
+      
+      # Compute activity in units of Bq/cm3 
+      activity_cm3 = activity_g  * bd,
+      
+      # Compute activity in units of Bq/m2, a standard unit
+      activity_m2 = activity_cm3  * height * 10000 # cm2 -> m2 conversion factor
+      
+    )
+ 
+  return(activity_area)
+   
+}
+
+#================================ Integrate BD ref data ================================
+
+#' [Test code]
+# activity_inventory = tar_read(activity_inventory); ref_bd_data = tar_read(ref_bd_data)
+
+
+combi = function(activity_inventory, ref_bd_data){
+ 
+  aaa = ref_bd_data %>%
+
+    # Compute bd     
+    mutate(bd = )
+    group_by(forest, bottom_depth) %>% 
+    summarise()
+   
 }
 
 #================================ Plot Activity ================================
 
 #' [Test code]
-# activity_inventory = tar_read(activity_inventory)
+# activity_inventory = tar_read(activity_area)
 
-plot_activity = function(activities){
+plot_activity = function(activity_inventory){
   
-  # Filter erosion data from reference data
-  eros_data = activity_inventory %>%
+  # Plot erosion data set 
+  erosion = activity_inventory %>%
+    
+    # Filter erosion data from reference data
     filter(
       forest %in% c("ASH", "WD", "MAG", "LRE", "LRW", "LRJ") &
         slope_pos %in% c("SU", "SH", "BS3", "BS2", "BS1", "FS30",
                                                  "TS30", "FS60", "TS60")
       ) %>%
+    
+    # Store forest and slope_pos as factors to order plots and axies
     mutate(forest = factor(forest, levels = c("ASH", "LRE", "LRW", "MAG", "WD", "LRJ"))) %>% 
     mutate(slope_pos = factor(slope_pos, levels = c("SU", "SH", "BS3", "BS2", "BS1", "FS30",
                                                  "TS30", "FS60", "TS60", "FS", "TS"))) %>% 
     group_by(forest, slope_pos) %>%
-    summarise(activity_cm3 = mean(activity_cm3), .groups = "drop") %>% # Removes replicate LRW samples for now
-    ungroup()
-  
-  # Plot erosion data
-  ggplot(data = eros_data, mapping = aes(x = slope_pos, y = activity_cm3)) +
-    geom_col() +
-    facet_wrap(~forest)
-  
+    #summarise(activity_m2 = mean(activity_m2), .groups = "drop") %>% # Removes replicate LRW samples for now
+    ungroup() %>% 
+    
+    # Plot
+    ggplot(mapping = aes(x = slope_pos, y = activity_m2)) +
+      geom_col(alpha = 0.5, position = position_identity()) +
+      facet_wrap(~forest)
+    
   # Filter reference data from erosion data
-  ref_data = activity_inventory %>%
+  reference = activity_inventory %>%
+    
+    # Filter for reference data
     filter(
       slope_pos %in% c("ref-25-30", "ref-20-25", "ref-15-20", "ref-10-15", "ref-5-10", "ref-0-5")
       ) %>%
     mutate(
       slope_pos = factor(slope_pos, levels = c("ref-25-30", "ref-20-25", "ref-15-20", "ref-10-15", "ref-5-10", "ref-0-5"))
-      ) 
+      ) %>% 
   
-  # Plot reference data
-  ggplot(data = ref_data, mapping = aes(x = activity_cm3, y = slope_pos)) +
+  # Plot
+  ggplot(mapping = aes(x = activity_m2, y = slope_pos)) +
     geom_col(width = 0.96) +
     facet_wrap(~forest, ncol = 1)
+  
+  all_plots = plot_grid(erosion, reference,
+                        ncol = 2,
+                        rel_widths = c(2,1.25))
+  
+  return(all_plots)
   
     
 }

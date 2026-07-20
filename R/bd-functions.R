@@ -1,8 +1,5 @@
 #================================ Setup ================================
 
-# Clear environment
-rm(list = ls(all.names = TRUE))
-
 # libraries needed
 libs <- c("httr", "jsonlite", "ggplot2", "terra", "leaflet", "ncdf4", "tidyr", "dplyr", "readr", "targets", "usethis", "sf", "targets", "visNetwork", "tarchetypes", "tidyterra", "performance", "see", "RColorBrewer", "lme4", "nlme", "readxl", "writexl", "emmeans", "splines", "lspline", "ggeffects", "lubridate", "cowplot", "gridGraphics", "broom", "DT", "flextable", "wesanderson", "ggspatial", "extrafont")
 
@@ -57,9 +54,9 @@ frn_ref1 = frn_ref %>%
     method = "ring",
     worms = NA,
     sample_date = as.Date(sample_date)
-  ) %>% 
+  ) #%>% 
   # Remove root ball sample
-  filter(!(forest == "AREF" & replicate == "B" & bottom_depth == 5))
+  #filter(!(forest == "AREF" & replicate == "B" & bottom_depth == 5))
 
 
 # FRN inventory
@@ -157,15 +154,22 @@ rp_plot = ggplot(data = runoff_plots_wide, mapping = aes(x = `bd-ring_5cm`,
 
 
 
+#================================ Mess with ref BD ================================
 
+# Filter for only arb
+testing = frn_ref1 %>% filter(bottom_depth == 5)
 
-#================================ Comapre Ref Samples ================================
+ggplot(data = testing, mapping = aes(x = replicate, y = bd)) +
+  geom_point() +
+  facet_wrap(~forest)
+
+#================================ Comapare Ref Samples ================================
 
 # Take the mean of the refernece samples
-mean_frn_ref = frn_ref1 %>% 
-  #group_by(forest, bottom_depth) %>% 
-  #summarise(mean = mean(bd)) %>% 
-  #ungroup()
+mean_frn_ref = frn_ref1 %>%
+  group_by(forest, bottom_depth) %>%
+  summarise(mean = mean(bd)) %>%
+  ungroup()
 
 # Join dfs
 inventory_ref = full_join(frn_inventory1, mean_frn_ref)
