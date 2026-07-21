@@ -107,16 +107,16 @@ list(
    read_xlsx("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/reference-bulk-density.xlsx")
  ),
  
- # ## Combine ring reference BD data and areal activity ====
- # tar_target(
- #   activity_inventory_bd,
- #   c # WIP
- # ),
+ ## Combine ring reference BD data and areal activity ====
+ tar_target(
+   activity_inventory_bd,
+   add_ref_bd(activity_inventory, ref_bd_data)
+ ),
  
  ## Compute activity in Bq / m2 ====
  tar_target(
    activity_area,
-   compute_activity_area(activity_inventory)
+   compute_activity_area(activity_inventory_bd)
  ),
  
  

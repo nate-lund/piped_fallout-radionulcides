@@ -53,7 +53,7 @@ energy_cal_tka = function(file_path){
 
 efficiency_cal_tka = function(spectrum){
   
-  # Create a function for the calibration equation, efficneicy at 661.7 is about 2.5%
+  # Create a function for the calibration equation, efficiency at 661.7 is about 2.5%
   # This set is from "Popeye_2026EZ-Marinelli_order2_Mar05_2026" 
   efficiency_cal <- function(E) {10^(-2.993e-04*E -1.546e00 + 1.185e02/E - 9.472e03/E^2 + 6.118e04/E^3)
   }
@@ -243,21 +243,50 @@ compute_activity = function(peak_counts, sample_inventory){
   return(activity_inventory)
 }
 
+#================================ Integrate BD ref data ================================
+
+#' [Test code]
+# activity_inventory = tar_read(activity_inventory); ref_bd_data = tar_read(ref_bd_data)
+
+add_ref_bd = function(activity_inventory, ref_bd_data){
+ 
+  bd_summary = ref_bd_data %>%
+
+    # Compute bd     
+    mutate(mass = boat_soil - weigh_boat,
+           bd = mass / ring_volume) %>% 
+    
+    # Need to drop bad samples
+    filter(!(forest == "AREF" & (replicate == "A" | replicate == "B" | replicate == "C") & bottom_depth == 5)) %>% 
+    
+    # Average among replicates
+    group_by(forest, bottom_depth) %>% 
+    summarise(ring_bd = mean(bd), .groups = "drop_last") %>% 
+    ungroup()
+  
+  activity_inventory_bd = left_join(activity_inventory, bd_summary, by = join_by(forest, bottom_depth))
+
+  return(activity_inventory_bd)
+}
+
 
 #================================ Activity Area Depth ================================
 # This requires a two pieces of information: sample BD and depth
 
 #' [Test code]
-# activity_inventory = tar_read(activity_inventory)
+# activity_inventory = tar_read(activity_inventory_bd)
 
 compute_activity_area = function(activity_inventory){
   
   # Compute
   activity_area = activity_inventory %>% 
+    
     mutate(
+      # Compute BD (g/cm3) using core volume
+      probe_bd = (tin_plus_soil - tin) / (probe_pushes * height * (pi * (probe_diameter/2)^2)),
       
-      # Compute BD (g/cm3)
-      bd = (tin_plus_soil - tin) / (probe_pushes * height * (pi * (probe_diameter/2)^2)),
+      # Create a best bd column
+      bd = if_else(is.na(ring_bd), probe_bd, ring_bd),
       
       # Compute activity in units of Bq/cm3 
       activity_cm3 = activity_g  * bd,
@@ -266,27 +295,11 @@ compute_activity_area = function(activity_inventory){
       activity_m2 = activity_cm3  * height * 10000 # cm2 -> m2 conversion factor
       
     )
- 
+  
   return(activity_area)
-   
+  
 }
 
-#================================ Integrate BD ref data ================================
-
-#' [Test code]
-# activity_inventory = tar_read(activity_inventory); ref_bd_data = tar_read(ref_bd_data)
-
-
-combi = function(activity_inventory, ref_bd_data){
- 
-  aaa = ref_bd_data %>%
-
-    # Compute bd     
-    mutate(bd = )
-    group_by(forest, bottom_depth) %>% 
-    summarise()
-   
-}
 
 #================================ Plot Activity ================================
 
