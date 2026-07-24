@@ -13,7 +13,7 @@ Assuming that all the prerequisites are in place.
 
 
 Prerequisites / Required inputs:
-1. A set of TKA files. These should be placed in the "_TKA-files" folder. My 
+1. A set of TKA files. These should be placed in the "_tka-files" folder. My 
 files will be in there by default, feel free to delete.
 
   File names should be structured as follows:
