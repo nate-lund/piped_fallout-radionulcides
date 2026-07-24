@@ -243,6 +243,69 @@ compute_activity = function(peak_counts, sample_inventory){
   return(activity_inventory)
 }
 
+
+
+#================================ Plot Activity in Bq/g ================================
+
+#' [Test code]
+# activity_inventory = tar_read(activity_inventory)
+
+plot_activity_g = function(activity_inventory){
+  
+  # Plot erosion data set 
+  erosion = activity_inventory %>%
+    
+    # Filter erosion data from reference data
+    filter(
+      forest %in% c("ASH", "WD", "MAG", "LRE", "LRW", "LRJ") &
+        slope_pos %in% c("SU", "SH", "BS3", "BS2", "BS1", "FS30",
+                         "TS30", "FS60", "TS60")
+    ) %>%
+    
+    # Store forest and slope_pos as factors to order plots and axies
+    mutate(forest = factor(forest, levels = c("ASH", "LRE", "LRW", "MAG", "WD", "LRJ"))) %>% 
+    mutate(slope_pos = factor(slope_pos, levels = c("SU", "SH", "BS3", "BS2", "BS1", "FS30",
+                                                    "TS30", "FS60", "TS60", "FS", "TS"))) %>% 
+    group_by(forest, slope_pos) %>%
+    #summarise(activity_m2 = mean(activity_m2), .groups = "drop") %>% # Removes replicate LRW samples for now
+    ungroup() %>% 
+    
+    # Plot
+    ggplot(mapping = aes(x = slope_pos, y = activity_g)) +
+    geom_col(alpha = 0.5, position = position_identity()) +
+    facet_wrap(~forest)
+  
+  # Filter reference data from erosion data
+  reference = activity_inventory %>%
+    
+    # Filter for reference data
+    filter(
+      slope_pos %in% c("ref-25-30", "ref-20-25", "ref-15-20", "ref-10-15", "ref-5-10", "ref-0-5")
+    ) %>%
+    mutate(
+      slope_pos = factor(slope_pos, levels = c("ref-25-30", "ref-20-25", "ref-15-20", "ref-10-15", "ref-5-10", "ref-0-5"))
+    ) %>% 
+    
+    # Plot
+    ggplot(mapping = aes(x = activity_g, y = slope_pos)) +
+    geom_col(width = 0.96) +
+    facet_wrap(~forest, ncol = 1)
+  
+  all_plots = plot_grid(erosion, reference,
+                        ncol = 2,
+                        rel_widths = c(2,1.25))
+  
+  
+  # Saves the plot to the _plots_outputs folder 
+  path = "_plot_outputs/all_activity_bq-g.png"
+  ggsave(path , all_plots, width = 8, height = 6)
+  
+  return(path)
+  
+  
+}
+
+
 #================================ Integrate BD ref data ================================
 
 #' [Test code]
@@ -301,12 +364,12 @@ compute_activity_area = function(activity_inventory){
 }
 
 
-#================================ Plot Activity ================================
+#================================ Plot Activity in Bq/m2 ================================
 
 #' [Test code]
 # activity_inventory = tar_read(activity_area)
 
-plot_activity = function(activity_inventory){
+plot_activity_m2 = function(activity_inventory){
   
   # Plot erosion data set 
   erosion = activity_inventory %>%
@@ -351,8 +414,13 @@ plot_activity = function(activity_inventory){
                         ncol = 2,
                         rel_widths = c(2,1.25))
   
-  return(all_plots)
   
+  # Saves the plot to the _plots_outputs folder 
+  path = "_plot_outputs/all_activity_bq-m2.png"
+  ggsave(path , all_plots, width = 8, height = 6)
+  
+  return(path)
+
     
 }
 

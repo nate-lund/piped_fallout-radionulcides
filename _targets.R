@@ -17,13 +17,21 @@ lapply(libs, library, character.only = T)
 
 # Set target options:
 tar_option_set(
-  packages = libs # Packages needed for tasks
-)
+  packages = libs, # Packages needed for tasks
+  error = "continue" # tar_make() will continue even if it hits one error
+  )
 
 # Run the R scripts in the R/ folder with functions
 tar_source("R/tka-functions.R")
 # tar_source(R/bd_functions.R)
 
+#' [WHEN RUNNING FOR THE FIRST TIME]
+# Run commented out code below to clear storage:
+# tar_destroy(destroy = c("objects")); file.remove(list.files("_plot_outputs", full.names = TRUE))
+
+# Set the path to your sample inventory .xlxs
+# See read me for needed columns.
+inventory_path = "G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample-inventory.xlsx"
 
 #================================ Targets ================================
 
@@ -33,7 +41,7 @@ list(
   ## List all TKA files in destination folder ====
   tar_target(
     tka_files,
-    list.files("C:/Users/natha/Box/_data/_fallout_radionuclides/Popeye_CAM-TKA", pattern = "\\.TKA$", full.names = TRUE),
+    list.files("_tka-files", pattern = "\\.TKA$", full.names = TRUE),
     cue = tar_cue(mode = "always")
     ),
   
@@ -44,13 +52,6 @@ list(
     pattern = map(tka_files),
     iteration = "list"
     ),
-  
-  ## Calibrate blank ====
-  tar_target(
-    blank,
-    energy_cal_tka(list.files("_blank/", pattern = "\\.TKA$", full.names = TRUE))
-    ),
-  
   
   ## Efficiency calibrate each spectra ====
   tar_target(
@@ -92,7 +93,7 @@ list(
   ## Load sample data ====
   tar_target(
     sample_inventory,
-    read_xlsx("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/sample-inventory.xlsx")
+    read_xlsx(inventory_path)
     ),
   
  ## Compute activity in Bq / g ====
@@ -101,10 +102,18 @@ list(
    compute_activity(all_peak_counts, sample_inventory)
  ),
 
+ ## Plot sample inventories in Bq/ g ====
+ tar_target(
+   activity_plots_g,
+   plot_activity_g(activity_inventory),
+   format = "file"
+ ),
+ 
+ 
  ## Pull ring reference BD data ====
  tar_target(
    ref_bd_data,
-   read_xlsx("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/reference-bulk-density.xlsx")
+   read_excel("G:/Shared drives/P05-mitppc-jumpingwormerosion/Project-Data/Fallout-Radionucldes/reference-bulk-density.xlsx")
  ),
  
  ## Combine ring reference BD data and areal activity ====
@@ -120,10 +129,11 @@ list(
  ),
  
  
- ## Plot sample inventories ====
+ ## Plot sample inventories in Bq/ m2 ====
  tar_target(
-   activity_plots,
-   plot_activity(activity_area)
+   activity_plots_m2,
+   plot_activity_m2(activity_area),
+   format = "file"
  )
  
  
