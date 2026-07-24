@@ -48,5 +48,5 @@ in my sample inventory sheet:
 
 
 NOTE: In any case, targets past "## Compute activity in Bq / g ====" will fail.
-Lots of outside information is needed here. YOu will also need to make changes
+Lots of outside information is needed here. You will also need to make changes
 to the plots, but this is place to start.
