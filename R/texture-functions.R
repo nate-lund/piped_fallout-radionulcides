@@ -120,17 +120,17 @@ data = texture_raw %>%
 plot_bins = function(data){
 
 # Filter for just one sample
-plot_data = psd_count %>% 
-  filter(sample == last(sample))
-
+plot_data = psd_count #%>% 
+  #filter(sample == last(sample))
 
 ggplot(data = plot_data, mapping= aes(y = count,
                                       x = log(size_um))) +
   geom_point() +
   geom_vline(xintercept = log(2000),  color = "darkred") + # grave-sand
   geom_vline(xintercept = log(50),  color = "firebrick") + # sand-silt
-  geom_vline(xintercept = log(2),  color = "red") # silt-clay
+  geom_vline(xintercept = log(2),  color = "red") + # silt-clay
   
+  facet_wrap(~sample)
 
 }
 
